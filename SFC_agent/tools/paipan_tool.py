@@ -1,4 +1,6 @@
 import datetime
+import datetime
+from google.adk.tools import ToolContext
 
 class XiaoLiuRenPaipan:
     def __init__(self):
@@ -162,6 +164,34 @@ class XiaoLiuRenPaipan:
             "taiji_info": taiji,
             "chart": result_chart
         }
+
+def calculate_hexagram(nums: list[int], tool_context: ToolContext) -> dict:
+    """
+    根据用户输入的三个数字进行小六壬排盘。
+    
+    Args:
+        nums: 包含两个整数的列表，例如 [78, 21]。第三个数字可选，用于指定时辰。
+        tool_context: 工具上下文，用于存储状态。
+        
+    Returns:
+        包含排盘结果的字典。
+    """
+    if len(nums) < 2:
+        return {"error": "请输入至少两个数字"}
+    
+    # 取前两个数字进行排盘 (根据 run_calculation 的签名)
+    num1 = nums[0]
+    num2 = nums[1]
+    
+    paipan = XiaoLiuRenPaipan()
+    
+    # 执行排盘
+    result = paipan.run_calculation(num1, num2)
+    
+    # 将结果存入 Session State
+    tool_context.session.state["hexagram_chart"] = result
+    
+    return {"status": "success", "report": "排盘完成，数据已存入状态。", "data": result}
 
 # --- 测试用例 (基于文档 Page 2-4 的举例) ---
 if __name__ == "__main__":

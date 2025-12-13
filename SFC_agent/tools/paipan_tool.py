@@ -1,5 +1,4 @@
 import datetime
-import datetime
 from google.adk.tools import ToolContext
 
 class XiaoLiuRenPaipan:
@@ -129,9 +128,11 @@ class XiaoLiuRenPaipan:
 
     def run_calculation(self, num1: int, num2: int, current_hour: int = None) -> dict:
         """执行完整排盘逻辑"""
-        # 0. 获取当前时辰
+        # 0. 获取当前时辰（使用北京时间 UTC+8）
         if current_hour is None:
-            current_hour = datetime.datetime.now().hour
+            # 获取北京时间
+            beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
+            current_hour = datetime.datetime.now(beijing_tz).hour
         shichen = self.get_shichen(current_hour)
 
         # 1. 第一步：定太极点
@@ -185,8 +186,11 @@ def calculate_hexagram(nums: list[int], tool_context: ToolContext) -> dict:
     
     paipan = XiaoLiuRenPaipan()
     
+    # 从 session state 读取用户指定的时辰（如果有）
+    current_hour = tool_context.session.state.get("paipan_hour", None)
+    
     # 执行排盘
-    result = paipan.run_calculation(num1, num2)
+    result = paipan.run_calculation(num1, num2, current_hour)
     
     # 将结果存入 Session State
     tool_context.session.state["hexagram_chart"] = result

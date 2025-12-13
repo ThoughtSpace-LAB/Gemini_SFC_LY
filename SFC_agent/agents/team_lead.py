@@ -4,7 +4,7 @@ from SFC_agent.tools.paipan_tool import calculate_hexagram
 from SFC_agent.agents.intent_agent import create_intent_agent
 from SFC_agent.agents.expert_agent import create_expert_agent
 
-def create_team_lead_agent(model_client, model_name="gemini-2.0-flash-exp"):
+def create_team_lead_agent(model_client, model_name="gemini-2.5-flash"):
     
     intent_agent = create_intent_agent(model_client, model_name)
     expert_agent = create_expert_agent(model_client, model_name)

@@ -1,7 +1,8 @@
 import json
 from google.adk import Agent
+from google.genai import types
 
-def create_expert_agent(model_client=None, model_name="gemini-2.0-flash-exp"):
+def create_expert_agent(model_client=None, model_name="gemini-2.5-flash"):
     try:
         with open("SFC_agent/prompt/expert.md", "r", encoding="utf-8") as f:
             base_instruction = f.read()
@@ -52,6 +53,9 @@ def create_expert_agent(model_client=None, model_name="gemini-2.0-flash-exp"):
     agent = Agent(
         model=model_name,
         instruction=instruction,
-        name="expert_agent"
+        name="expert_agent",
+        generate_content_config=types.GenerateContentConfig(
+            temperature=0.4,  # 解读需要稳定准确，同时保持一定灵活性
+        )
     )
     return agent

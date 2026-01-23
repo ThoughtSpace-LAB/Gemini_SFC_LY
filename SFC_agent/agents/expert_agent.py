@@ -2,7 +2,7 @@ import json
 from google.adk import Agent
 from google.genai import types
 
-def create_expert_agent(model_client=None, model_name="gemini-2.5-flash"):
+def create_expert_agent(model_client=None, model_name="gemini-3-flash-preview"):
     try:
         with open("SFC_agent/prompt/expert.md", "r", encoding="utf-8") as f:
             base_instruction = f.read()
@@ -22,8 +22,13 @@ def create_expert_agent(model_client=None, model_name="gemini-2.5-flash"):
 {knowledge_str}
 
 ## 任务说明
-从 Session State 读取：
-- hexagram_chart: 卦象信息（包含宫位、地支、六兽、六亲、太极点等）
+从 Session State 读取以下参数：
+- hexagram_chart: 卦象排盘数据（字典结构），包含：
+    - date_info: 起卦时间与日柱干支
+    - main_hexagram: 本卦详情（卦名、所属宫位）
+        - lines: 本卦六爻列表（包含：六神、伏神、飞神、世应位置、纳甲干支、六亲、动静状态）
+    - changed_hexagram: 变卦详情（卦名）
+        - lines: 变卦六爻列表（包含：纳甲干支、六亲）
 - focus_liu_qin: 用户关注的用神（如"官鬼,父母,我"）
 
 ## 解卦步骤

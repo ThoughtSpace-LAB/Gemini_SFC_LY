@@ -5,6 +5,8 @@ from enum import Enum, auto
 from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Dict
 from lunarcalendar import Converter, Solar, Lunar
+import datetime
+from google.adk.tools import ToolContext
 
 # ==========================================
 # 第一部分：基础数据定义 (Enums & Constants)
@@ -727,6 +729,91 @@ class LiuYaoSystem:
         if day_stem:
             LiuYaoEngine.calculate_six_gods(main, day_stem)
 
+    def get_hexagram_chart(self, main: Hexagram, changed: Hexagram, ganzhi_info: Dict) -> Dict:
+        """
+        Output the hexagram data for expert_agent in a structured dictionary.
+        This provides all necessary details:
+        - Main/Changed Hexagram (Name, Lines)
+        - Shi/Ying (in Main)
+        - Palace (Main)
+        - NaJia (Stems/Branches for both)
+        - Six Relatives (for both)
+        - Flying/Hidden Spirits (Main)
+        - Six Gods (Main)
+        """
+        
+        def _fmt_line(line: Yao, is_main: bool, shi_idx: int = -1, ying_idx: int = -1):
+            """Helper to format a single line"""
+            data = {
+                "position": line.position, # 1-6
+                "yin_yang": "阳" if line.yin_yang == YinYang.YANG else "阴",
+                "status": "动" if line.status == YaoStatus.MOVING else "静",
+                "symbol": line.symbol_char,
+                "stem": line.stem.chn_name if line.stem else "",
+                "branch": line.branch.chn_name if line.branch else "",
+                "wuxing": line.branch.element.value if line.branch else "",
+                "relative": line.relative.value if line.relative else "",
+            }
+            
+            if is_main:
+                data["god"] = line.god.value if line.god else ""
+                
+                # Hidden Spirit (Fu Shen)
+                if line.hidden_relative:
+                    data["hidden"] = {
+                        "relative": line.hidden_relative.value,
+                        "branch": line.hidden_branch.chn_name if line.hidden_branch else "",
+                        "stem": line.hidden_stem.chn_name if line.hidden_stem else "",
+                        "wuxing": line.hidden_branch.element.value if line.hidden_branch else ""
+                    }
+                
+                # Shi/Ying
+                idx = line.position - 1
+                if idx == shi_idx:
+                    data["role"] = "世"
+                elif idx == ying_idx:
+                    data["role"] = "应"
+                else:
+                    data["role"] = ""
+            
+            return data
+
+        # Prepare Main Hexagram Lines (ordered 6 -> 1 usually for display, but list implies 1->6 index wise. 
+        # But 'lines' attribute is 0(Line1) to 5(Line6).
+        # We will return them in order 1->6 but maybe consumption needs top-down. 
+        # Let's return list 1->6 (index 0->5) for programmatic access, or matching display order? 
+        # 'lines' attribute is 0-5. Let's keep that structure.
+        
+        main_lines_data = []
+        for i in range(6):
+            main_lines_data.append(_fmt_line(main.lines[i], True, main.shi_index, main.ying_index))
+            
+        changed_lines_data = []
+        for i in range(6):
+            changed_lines_data.append(_fmt_line(changed.lines[i], False))
+
+        # Handle full name safely
+        main_name = getattr(main, 'full_name', f"{main.upper_trigram.chn_name}{main.lower_trigram.chn_name}")
+        changed_name = getattr(changed, 'full_name', f"{changed.upper_trigram.chn_name}{changed.lower_trigram.chn_name}")
+
+        return {
+            "date_info": {
+                "solar": datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), # Or from input if stored
+                "lunar_str": ganzhi_info.get('lunar_str', ''),
+                "year_ganzhi": f"{ganzhi_info.get('year_stem', '').chn_name}{ganzhi_info.get('year_branch', '').chn_name}",
+                "day_stem": ganzhi_info.get('day_stem', '').chn_name
+            },
+            "main_hexagram": {
+                "name": main_name,
+                "palace": main.palace.chn_name if main.palace else "",
+                "lines": main_lines_data # Index 0 is Line 1
+            },
+            "changed_hexagram": {
+                "name": changed_name,
+                "lines": changed_lines_data
+            }
+        }
+
     def display(self, main: Hexagram, changed: Hexagram):
         print("\n" + "="*60)
         print(f"本卦: {main.full_name} (宫: {main.palace.chn_name if main.palace else '?'})")
@@ -809,3 +896,69 @@ if __name__ == "__main__":
     print("\n【场景 5: 钱币起卦】")
     coins = [2, 2, 3, 1, 2, 0]  # 从初爻到上爻的正面数
     system.run_coin_method(coins, day_stem_num=ganzhi['day_stem_num'])
+def calculate_hexagram(nums: List[int] = None, tool_context: ToolContext = None) -> str:
+    """
+    根据输入的数字或当前时间进行六爻起卦排盘。
+    
+    Args:
+        nums: (可选) 用户输入的数字列表。
+              - 如果提供2个或以上数字，取前两个作为上卦和下卦数。
+              - 动爻默认为 (两数之和) % 6。
+        tool_context: ADK 工具上下文，用于存储排盘结果。
+    """
+    system = LiuYaoSystem()
+    now = datetime.datetime.now()
+    
+    # Check for custom hour in session
+    custom_hour = None
+    if tool_context and tool_context.session:
+        custom_hour = tool_context.session.state.get("paipan_hour")
+        
+    if custom_hour is not None:
+         # Replace hour in 'now'
+         # Note: system.solar_to_ganzhi computes stem/branch based on date, which is fine
+         try:
+             now = now.replace(hour=int(custom_hour), minute=0, second=0)
+         except ValueError:
+             pass # Ignore invalid hour
+    
+    ganzhi_info = system.solar_to_ganzhi(now)
+    day_stem_num = ganzhi_info['day_stem_num']
+
+    main_hex = None
+    changed_hex = None
+
+    if nums and len(nums) >= 2:
+        num1 = nums[0]
+        num2 = nums[1]
+        
+        # Logic from run_number_method
+        moving = (num1 + num2) % 6
+        if moving == 0: moving = 6
+        
+        main_hex, changed_hex = LiuYaoEngine.create_hexagram_from_numbers(
+            num1 % 8 if num1 % 8 != 0 else 8,
+            num2 % 8 if num2 % 8 != 0 else 8,
+            moving
+        )
+        mode = "数字起卦"
+    else:
+        # Time method
+        main_hex, changed_hex = LiuYaoEngine.method_date(
+            ganzhi_info['year_branch_num'],
+            ganzhi_info['lunar_month'],
+            ganzhi_info['lunar_day'],
+            ganzhi_info['hour_branch_num']
+        )
+        mode = "时间起卦"
+
+    # Process details (Najia, etc.)
+    system.process_details(main_hex, changed_hex, day_stem_num)
+    
+    # Generate Chart Data source
+    chart_data = system.get_hexagram_chart(main_hex, changed_hex, ganzhi_info)
+    
+    if tool_context and tool_context.session:
+        tool_context.session.state["hexagram_chart"] = chart_data
+        
+    return f"已完成{mode}。本卦：{chart_data['main_hexagram']['name']}，变卦：{chart_data['changed_hexagram']['name']}。请专家进行解读。"

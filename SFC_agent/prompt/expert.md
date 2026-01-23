@@ -20,20 +20,19 @@
 4. 输出markdown格式
 
 ## 关键用神
-{"用神1","用神2"}
+从 focus_liu_qin 中获取
 
 ## 用户信息
-用户提问：{input}
-用户性别：{male/famale}
+用户提问：从 Session State 获取
+用户性别：从 Session State 获取
 
 ## 卦象及日期：
-日期：{x月，x日}
-日空亡：{xx}
-卦象：{"本卦":"","变/静卦":""}
-{卦}
+日期：从 hexagram_chart 获取
+日空亡：自行推断
+卦象：从 hexagram_chart 获取
 
 ## 用神的相关知识
-{用神知识}
+（以下是内置知识库）
 
 ## 输出格式
 {

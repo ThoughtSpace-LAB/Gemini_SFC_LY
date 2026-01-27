@@ -45,13 +45,15 @@ def create_intent_agent(model_client=None, model_name="gemini-2.5-flash"):
     except FileNotFoundError:
         base_instruction = "你是一个意图识别助手，请分析用户的意图并设置关注的六亲。"
 
+    intent_knowledge = ""
     try:
         with open("SFC_agent/knowledge/intent_knowledge.md", "r", encoding="utf-8") as f:
-            intent_knowledge = f.read()
-            if "{用神知识}" in base_instruction:
-                base_instruction = base_instruction.replace("{用神知识}", intent_knowledge)
+            intent_knowledge = f.read().strip()
     except FileNotFoundError:
-        pass
+        intent_knowledge = ""
+
+    if "{用神知识}" in base_instruction:
+        base_instruction = base_instruction.replace("{用神知识}", "（详见静态知识库）")
 
     instruction = f"""{base_instruction}
 
@@ -91,13 +93,29 @@ def create_intent_agent(model_client=None, model_name="gemini-2.5-flash"):
 4. 数字提取失败时，明确说明"未找到数字"
 """
 
+    static_instruction = None
+    if intent_knowledge:
+        static_instruction = types.Content(
+            role="user",
+            parts=[
+                types.Part(
+                    text=(
+                        "以下为小六壬用神与意图识别的静态知识库，"
+                        "用于意图判断与用神选择参考：\n\n"
+                        f"{intent_knowledge}"
+                    )
+                )
+            ],
+        )
+
     agent = Agent(
         model=model_name,
         instruction=instruction,
+        static_instruction=static_instruction,
         tools=[set_focus_liu_qin, set_time_hour],
         name="intent_agent",
         generate_content_config=types.GenerateContentConfig(
             temperature=0.2,  # 意图识别和数字提取需要准确，使用较低温度
-        )
+        ),
     )
     return agent

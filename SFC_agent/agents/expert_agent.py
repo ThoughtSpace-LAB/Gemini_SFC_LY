@@ -9,19 +9,24 @@ def create_expert_agent(model_client=None, model_name="gemini-3-flash-preview"):
     except FileNotFoundError:
         base_instruction = "你是一个小六壬解卦专家。"
 
+    knowledge_str = ""
+    rules_text = ""
     try:
         with open("SFC_agent/knowledge/expert_knowledge.md", "r", encoding="utf-8") as f:
-            knowledge_str = f.read()
-            # Replace placeholder in base_instruction if it exists
-            if "{用神知识}" in base_instruction:
-                base_instruction = base_instruction.replace("{用神知识}", knowledge_str)
-                knowledge_str = "" # Clear it so we don't append it again if we appended it before
+            knowledge_str = f.read().strip()
     except FileNotFoundError:
         knowledge_str = ""
 
-    instruction = f"""{base_instruction}
+    try:
+        with open("SFC_agent/knowledge/rules.py", "r", encoding="utf-8") as f:
+            rules_text = f.read().strip()
+    except FileNotFoundError:
+        rules_text = ""
 
-{knowledge_str}
+    if "{用神知识}" in base_instruction:
+        base_instruction = base_instruction.replace("{用神知识}", "（详见静态知识库）")
+
+    instruction = f"""{base_instruction}
 
 ## 任务说明
 从 Session State 读取以下参数：
@@ -57,12 +62,36 @@ def create_expert_agent(model_client=None, model_name="gemini-3-flash-preview"):
 - 总字数不少于600字
 """
 
+    static_instruction = None
+    if knowledge_str or rules_text:
+        static_parts = []
+        if knowledge_str:
+            static_parts.append(
+                "以下为小六壬解卦相关静态知识库，"
+                "用于解卦分析与用神判断参考：\n\n"
+                f"{knowledge_str}"
+            )
+        if rules_text:
+            static_parts.append(
+                "\n\n以下为规则与术语补充（来自 knowledge/rules.py）：\n\n"
+                f"{rules_text}"
+            )
+        static_instruction = types.Content(
+            role="user",
+            parts=[
+                types.Part(
+                    text="".join(static_parts)
+                )
+            ],
+        )
+
     agent = Agent(
         model=model_name,
         instruction=instruction,
+        static_instruction=static_instruction,
         name="expert_agent",
         generate_content_config=types.GenerateContentConfig(
             temperature=0.4,  # 解读需要稳定准确，同时保持一定灵活性
-        )
+        ),
     )
     return agent

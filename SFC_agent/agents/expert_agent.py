@@ -10,15 +10,17 @@ def create_expert_agent(model_client=None, model_name="gemini-3-flash-preview"):
         base_instruction = "你是一个小六壬解卦专家。"
 
     try:
-        with open("SFC_agent/knowledge/knowledge.json", "r", encoding="utf-8") as f:
-            knowledge = json.load(f)
-            knowledge_str = json.dumps(knowledge, ensure_ascii=False, indent=2)
+        with open("SFC_agent/knowledge/expert_knowledge.md", "r", encoding="utf-8") as f:
+            knowledge_str = f.read()
+            # Replace placeholder in base_instruction if it exists
+            if "{用神知识}" in base_instruction:
+                base_instruction = base_instruction.replace("{用神知识}", knowledge_str)
+                knowledge_str = "" # Clear it so we don't append it again if we appended it before
     except FileNotFoundError:
         knowledge_str = ""
 
     instruction = f"""{base_instruction}
 
-## 知识库（六神详细含义）
 {knowledge_str}
 
 ## 任务说明

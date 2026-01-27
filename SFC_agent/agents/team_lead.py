@@ -37,7 +37,7 @@ def create_team_lead_agent(model_client=None, model_name="gemini-2.5-flash"):
         instruction=instruction,
         tools=[
             calculate_hexagram, 
-            AgentTool(agent=intent_agent), 
+            AgentTool(agent=intent_agent),
             AgentTool(agent=expert_agent),
             AgentTool(agent=expert_normal_agent)
         ],

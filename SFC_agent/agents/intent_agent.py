@@ -45,6 +45,14 @@ def create_intent_agent(model_client=None, model_name="gemini-2.5-flash"):
     except FileNotFoundError:
         base_instruction = "你是一个意图识别助手，请分析用户的意图并设置关注的六亲。"
 
+    try:
+        with open("SFC_agent/knowledge/intent_knowledge.md", "r", encoding="utf-8") as f:
+            intent_knowledge = f.read()
+            if "{用神知识}" in base_instruction:
+                base_instruction = base_instruction.replace("{用神知识}", intent_knowledge)
+    except FileNotFoundError:
+        pass
+
     instruction = f"""{base_instruction}
 
 ## 核心任务和执行顺序

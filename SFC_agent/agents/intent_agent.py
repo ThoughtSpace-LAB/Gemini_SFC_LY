@@ -55,6 +55,12 @@ def create_intent_agent(model_client=None, model_name="gemini-2.5-flash"):
     if "{用神知识}" in base_instruction:
         base_instruction = base_instruction.replace("{用神知识}", "（详见静态知识库）")
 
+    # 移除未在 session state 中的变量占位符，防止运行时 KeyError
+    if "{input}" in base_instruction:
+        base_instruction = base_instruction.replace("{input}", "（请参考当前对话输入）")
+    if "{male/famale}" in base_instruction:
+        base_instruction = base_instruction.replace("{male/famale}", "（请参考当前对话输入中的性别信息）")
+
     instruction = f"""{base_instruction}
 
 ## 核心任务和执行顺序

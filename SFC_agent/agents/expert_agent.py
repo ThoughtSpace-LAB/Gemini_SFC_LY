@@ -26,6 +26,23 @@ def create_expert_agent(model_client=None, model_name="gemini-3-flash-preview"):
     if "{用神知识}" in base_instruction:
         base_instruction = base_instruction.replace("{用神知识}", "（详见静态知识库）")
 
+    # 移除未在 session state 中的变量占位符，防止运行时 KeyError
+    if "{input}" in base_instruction:
+        base_instruction = base_instruction.replace("{input}", "（请参考当前对话输入）")
+    if "{male/famale}" in base_instruction:
+        base_instruction = base_instruction.replace("{male/famale}", "（请参考当前对话输入中的性别信息）")
+    
+    # 替换其他可能导致 KeyError 的占位符
+    if "{x月，x日}" in base_instruction:
+        base_instruction = base_instruction.replace("{x月，x日}", "（见排盘数据）")
+    if "{xx}" in base_instruction:
+        base_instruction = base_instruction.replace("{xx}", "（见排盘数据）")
+    if "{卦}" in base_instruction:
+        base_instruction = base_instruction.replace("{卦}", "（见排盘数据）")
+    # 替换可能被误认为变量的 JSON 示例
+    if '{"本卦":"","变/静卦":""}' in base_instruction:
+        base_instruction = base_instruction.replace('{"本卦":"","变/静卦":""}', '（见排盘数据）')
+
     instruction = f"""{base_instruction}
 
 ## 任务说明

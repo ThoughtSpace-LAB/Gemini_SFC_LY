@@ -16,7 +16,7 @@ root_agent = create_team_lead_agent(model_client=None, model_name=AGENT_MODEL)
 
 # 启用 Context Caching，缓存静态知识上下文以减少 token 和提升响应
 app = App(
-	name="sfc_agent_app",
+	name="SFC_agent",
 	root_agent=root_agent,
 	context_cache_config=ContextCacheConfig(
 		cache_intervals=20,

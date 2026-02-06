@@ -896,7 +896,7 @@ if __name__ == "__main__":
     print("\n【场景 5: 钱币起卦】")
     coins = [2, 2, 3, 1, 2, 0]  # 从初爻到上爻的正面数
     system.run_coin_method(coins, day_stem_num=ganzhi['day_stem_num'])
-def calculate_hexagram(nums: List[int] = None, tool_context: ToolContext = None) -> str:
+def calculate_hexagram(nums: List[int] = None, hour: int = None, tool_context: ToolContext = None) -> str:
     """
     根据输入的数字或当前时间进行六爻起卦排盘。
     
@@ -904,21 +904,22 @@ def calculate_hexagram(nums: List[int] = None, tool_context: ToolContext = None)
         nums: (可选) 用户输入的数字列表。
               - 如果提供2个或以上数字，取前两个作为上卦和下卦数。
               - 动爻默认为 (两数之和) % 6。
+        hour: (可选) 指定排盘的小时（0-23），如果不指定则使用当前时间。
         tool_context: ADK 工具上下文，用于存储排盘结果。
     """
     system = LiuYaoSystem()
     now = datetime.datetime.now()
     
-    # Check for custom hour in session
-    custom_hour = None
-    if tool_context and tool_context.session:
-        custom_hour = tool_context.session.state.get("paipan_hour")
+    # Check for custom hour in session or argument
+    target_hour = hour
+    if target_hour is None and tool_context and tool_context.session:
+        target_hour = tool_context.session.state.get("paipan_hour")
         
-    if custom_hour is not None:
+    if target_hour is not None:
          # Replace hour in 'now'
          # Note: system.solar_to_ganzhi computes stem/branch based on date, which is fine
          try:
-             now = now.replace(hour=int(custom_hour), minute=0, second=0)
+             now = now.replace(hour=int(target_hour), minute=0, second=0)
          except ValueError:
              pass # Ignore invalid hour
     
